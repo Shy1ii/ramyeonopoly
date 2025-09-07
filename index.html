@@ -1,0 +1,2378 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monopoly: The Eleventh Night in Elysium</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <style>
+        .log-item {
+            transition: all 0.3s ease;
+        }
+        .log-item:hover {
+            background-color: #f0f9ff;
+        }
+        .board {
+            display: grid;
+            gap: 8px;
+            margin: 20px 0;
+        }
+        @media (min-width: 1024px) {
+            .board {
+                grid-template-columns: repeat(5, 1fr); /* 宽屏5列3行 */
+            }
+        }
+        @media (max-width: 1023px) {
+            .board {
+                grid-template-columns: repeat(3, 1fr); /* 窄屏3列5行 */
+            }
+        }
+        .board-cell {
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            padding: 6px 3px;
+            text-align: center;
+            font-size: clamp(10px, 2vw, 14px); /* 字体稍大 */
+            height: 80px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            opacity: 0.8;
+        }
+        .board-cell.start, .board-cell.anywheredoor {
+            background-color: #faebe0;
+            border-color: #ebd6c6;
+        }
+        .board-cell.property {
+            background-color: #fff8d6;
+            border-color: #FEFFC0;
+            color: #333;
+        }
+        .board-cell.wander {
+            background-color: #e9fee5;
+            border-color: #D7F5CA;
+        }
+        .board-cell.fate {
+            background-color: #Faeae9;
+            border-color: #FED4D8;
+        }
+        .board-cell.chance {
+            background-color: #d5e8ff;
+            border-color: #CAECF5;
+        }
+        .board-cell.current {
+            border-color: #e3e1eb;
+            background-color: #efedf4;
+            animation: pulse 1.5s infinite;
+            opacity: 1;
+        }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.4); }
+            70% { box-shadow: 0 0 0 8px rgba(139, 92, 246, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0); }
+        }
+        .player-marker {
+            font-weight: bold;
+            color: #8b5cf6;
+        }
+        .negative-money {
+            color: #dc2626;
+            font-weight: bold;
+        }
+        .positive-money {
+            color: #dc2626; /* 财富正值颜色修改 */
+            font-weight: bold;
+        }
+        .event-actions {
+            margin-top: 1rem;
+            display: flex;
+            justify-content: center;
+        }
+        .card {
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        .card-header {
+            padding: 1rem;
+            text-align: center;
+        }
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        .card-subtitle {
+            font-size: 1rem;
+            opacity: 0.8;
+        }
+        .card-body {
+            padding: 1rem;
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+        }
+        .card-footer {
+            padding: 0.5rem 1rem;
+            text-align: center;
+            font-size: 0.8rem;
+            color: #999 !important;
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+        }
+        .card-status {
+            padding: 0.5rem 1rem;
+            text-align: center;
+            font-size: 0.9rem;
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+        }
+        .fate-card .card-header {
+            background-color: #Faeae9;
+        }
+        .chance-card .card-header {
+            background-color: #CAECF5;
+        }
+        .property-card .card-header {
+            background-color: #FEFFC0;
+        }
+        .wander-card .card-header {
+            background-color: #e9fee5;
+            border-bottom: 1px solid #D7F5CA;
+        }
+        .anywheredoor-card .card-header {
+            background-color: #faebe0;
+            border-color: #ebd6c6;
+        }
+        .option-btn, 
+        #start-btn, 
+        #roll-btn, 
+        #continue-btn {
+            margin-bottom: 0.5rem !important;
+            background-color: #f6ede8 !important;
+            color: #333 !important;
+            border: 1px solid #e8d8c8 !important;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        .option-btn:hover, 
+        #start-btn:hover, 
+        #roll-btn:hover, 
+        #continue-btn:hover {
+            background-color: #e8d8c8 !important;
+        }
+        .story-manual-toggle {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: #e3e1eb !important;
+            color: #333 !important;
+            padding: 10px 20px;
+            text-align: center;
+            cursor: pointer;
+            z-index: 1000;
+            font-weight: bold;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+            border-top: 1px solid #c9c5d6 !important;
+        }
+        .story-manual-container {
+            position: fixed;
+            bottom: 45px;
+            left: 0;
+            right: 0;
+            background-color: #fcfcf9;
+            max-height: 70vh;
+            overflow-y: auto;
+            z-index: 999;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.2);
+            transform: translateY(100%);
+            transition: transform 0.3s ease;
+        }
+        .story-manual-container.open {
+            transform: translateY(0);
+        }
+        .manual-tabs {
+            display: flex;
+            border-bottom: 1px solid #c9c5d6;
+            background-color: white;
+        }
+        .manual-tab {
+            flex: 1;
+            text-align: center;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            background-color: white !important;
+            color: #333 !important;
+            border: none !important;
+            transition: background-color 0.2s ease;
+        }
+        .manual-tab:hover {
+            background-color: #f5f5f5 !important;
+        }
+        .manual-tab.active {
+            border-bottom-color: #8b5cf6;
+            color: #8b5cf6 !important;
+            background-color: #f9f0ff !important;
+        }
+        .manual-content {
+            padding: 15px;
+            background-color: #fcfcf9;
+        }
+        .manual-section {
+            display: none;
+        }
+        .manual-section.active {
+            display: block;
+        }
+        .manual-category {
+            margin-bottom: 20px;
+        }
+        .category-title {
+            font-weight: bold;
+            font-size: 1.2rem;
+            margin: 15px 0 10px;
+            padding-left: 5px;
+            border-left: 3px solid #8b5cf6;
+            color: #5a566c;
+        }
+        .subcategory {
+            margin-left: 15px;
+            margin-bottom: 15px;
+        }
+        .subcategory-title {
+            font-weight: bold;
+            margin: 10px 0 5px;
+            color: #5a566c;
+        }
+        .story-item {
+            margin-bottom: 10px;
+            padding: 8px;
+            border-radius: 4px;
+            background-color: #f9fafb;
+            border: 1px solid #e3e1eb;
+        }
+        .story-title {
+            font-weight: bold;
+            margin-bottom: 3px;
+            color: #5a566c;
+        }
+        .story-content {
+            color: #000 !important;
+            line-height: 1.6;
+            font-size: 0.95rem;
+        }
+        .story-locked .story-content {
+            color: #999 !important;
+            font-style: italic;
+        }
+        .container {
+            margin-bottom: 60px;
+        }
+        .info-bar {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .info-left, .info-right {
+            flex: 1;
+            min-width: 200px;
+        }
+        #name-input {
+            border: 1px solid #ffb79d !important;
+            border-radius: 4px;
+        }
+        #name-input:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(246, 237, 232, 0.5);
+        }
+        #dice {
+            color: #666 !important;
+        }
+        .event-effect p, .card-body p, .card-status, .event-effect {
+            color: #000 !important;
+        }
+        .story-branch {
+            margin-left: 15px;
+            padding-left: 10px;
+            border-left: 2px solid #e3e1eb;
+            margin-top: 5px;
+            font-size: 0.9rem;
+        }
+        #event-effect {
+            border: 1px solid #e3e1eb;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+        .step-selector {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 5px;
+            margin-top: 1rem;
+        }
+        .step-btn {
+            padding: 0.5rem;
+            border-radius: 4px;
+            border: 1px solid #e8d8c8;
+            background-color: #f6ede8;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .step-btn:hover {
+            background-color: #e8d8c8;
+        }
+        .step-btn.selected {
+            background-color: #d5e8ff;
+            border-color: #CAECF5;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="container mx-auto px-4 py-8 max-w-5xl">
+        <header class="mb-6">
+            <h1 class="text-2xl font-bold text-center mb-4">Monopoly: The Eleventh Night in Elysium</h1>
+            <div class="bg-white p-4 rounded-lg shadow">
+                <div class="info-bar">
+                    <div class="info-left">
+                        <p>玩家: <span id="playerName">未知用户101115</span></p>
+                        <p>财富: <span id="money" class="positive-money">13000</span></p>
+                        <p>当前位置: <span id="current-position">起点</span></p>
+                    </div>
+                    <div class="info-right">
+                        <p>探索时长: <span id="dayCount">0</span>天</p>
+                        <p>探索进度: <span id="exploration-progress">0</span>%</p>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="bg-white rounded-lg shadow p-6 mb-6 min-h-[300px]">
+            <div id="start-screen" class="text-center">
+                <h2 class="text-xl font-bold mb-4">Welcome to Elysium!!</h2>
+                <div class="mb-6">
+                    <label class="block mb-2">昵称:</label>
+                    <input type="text" id="name-input" placeholder="输入昵称" class="border rounded px-3 py-2 w-full max-w-xs mx-auto">
+                </div>
+                <button id="start-btn">
+                    Start 
+                </button>
+            </div>
+
+            <div id="dice-screen" class="hidden text-center">
+                <h2 class="text-xl font-bold mb-6">第 <span id="current-day">1</span> 日</h2>
+                <p class="mb-4">点击骰子前进</p>
+                <div class="text-8xl font-bold text-blue-500 mb-6" id="dice">?</div>
+                <div class="flex justify-center gap-4">
+                    <button id="roll-btn">
+                        Roll
+                    </button>
+                </div>
+            </div>
+
+            <div id="event-screen" class="hidden">
+                <div id="event-card-container" class="mb-6">
+                </div>
+                <div id="event-options" class="space-y-2 mb-4"></div>
+                <div id="event-effect" class="p-3 rounded mb-4 hidden"></div>
+                <div class="event-actions">
+                    <button id="continue-btn" class="hidden">
+                        Go 
+                    </button>
+                </div>
+            </div>
+        </main>
+
+        <div class="bg-white p-4 rounded-lg shadow mb-6 overflow-x-auto">
+            <h2 class="text-center font-bold mb-2">地图</h2>
+            <div class="board" id="game-board">
+            </div>
+        </div>
+
+    </div>
+
+    <div class="story-manual-toggle" id="story-manual-toggle">
+        探险手记
+    </div>
+    <div class="story-manual-container" id="story-manual-container">
+        <div class="manual-tabs">
+            <div class="manual-tab active" data-tab="location">地点</div>
+            <div class="manual-tab" data-tab="wander">漫游</div>
+            <div class="manual-tab" data-tab="fate">命运</div>
+            <div class="manual-tab" data-tab="chance">机会</div>
+        </div>
+        <div class="manual-content">
+            <div class="manual-section active" id="location-section">
+                <!-- 去掉"地产"二级标题，直接显示各个地产 -->
+                <div class="subcategory">
+                    <div class="subcategory-title">恶灵岛 (Onigashima)</div>
+                    <div class="story-item" id="story-location-1-01-purchase">
+                        <div class="story-title">购买</div>
+                        <div class="story-content story-locked">未解锁</div>
+                    </div>
+                    <div class="story-item" id="story-location-1-01-develop">
+                        <div class="story-title">拉面馆</div>
+                        <div class="story-content story-locked">未解锁</div>
+                    </div>
+                    <div class="story-item" id="story-location-1-01-after-1">
+                        <div class="story-title">后续1</div>
+                        <div class="story-content story-locked">未解锁</div>
+                    </div>
+                    <div class="story-item" id="story-location-1-01-after-2">
+                        <div class="story-title">后续2</div>
+                        <div class="story-content story-locked">未解锁</div>
+                    </div>
+                </div>
+                
+                <div class="subcategory">
+                    <div class="subcategory-title">塔尔塔洛斯 (Tartarus)</div>
+                    <div class="story-item" id="story-location-1-02-purchase">
+                        <div class="story-title">购买</div>
+                        <div class="story-content story-locked">未解锁</div>
+                    </div>
+                    <div class="story-item" id="story-location-1-02-develop">
+                        <div class="story-title">酒店</div>
+                        <div class="story-content story-locked">未解锁</div>
+                    </div>
+                    <div class="story-item" id="story-location-1-02-after-1">
+                        <div class="story-title">后续1</div>
+                        <div class="story-content story-locked">未解锁</div>
+                    </div>
+                    <div class="story-item" id="story-location-1-02-after-2">
+                        <div class="story-title">后续2</div>
+                        <div class="story-content story-locked">未解锁</div>
+                    </div>
+                    <div class="story-item" id="story-location-1-02-after-3">
+                        <div class="story-title">后续3</div>
+                        <div class="story-content story-locked">未解锁</div>
+                    </div>
+                    <div class="story-item" id="story-location-1-02-after-4">
+                        <div class="story-title">后续4</div>
+                        <div class="story-content story-locked">未解锁</div>
+                    </div>
+                </div>
+                
+                <div class="subcategory">
+                    <div class="subcategory-title">特兰西瓦尼亚 (Transylvania)</div>
+                    <div class="story-item" id="story-location-1-03-purchase">
+                        <div class="story-title">购买</div>
+                        <div class="story-content story-locked">未解锁</div>
+                    </div>
+                    <div class="story-item" id="story-location-1-03-develop">
+                        <div class="story-title">晚报社</div>
+                        <div class="story-content story-locked">未解锁</div>
+                    </div>
+                    <div class="story-item" id="story-location-1-03-after-1">
+                        <div class="story-title">后续1</div>
+                        <div class="story-content story-locked">未解锁</div>
+                    </div>
+                    <div class="story-item" id="story-location-1-03-after-2">
+                        <div class="story-title">后续2</div>
+                        <div class="story-content story-locked">未解锁</div>
+                    </div>
+                    <div class="story-item" id="story-location-1-03-after-3">
+                        <div class="story-title">后续3</div>
+                        <div class="story-content story-locked">未解锁</div>
+                    </div>
+                    <div class="story-item" id="story-location-1-03-after-4">
+                        <div class="story-title">后续4</div>
+                        <div class="story-content story-locked">未解锁</div>
+                    </div>
+                </div>
+                
+                <div class="subcategory">
+                    <div class="subcategory-title">雷蒙盖顿街 (Lemegeton St.)</div>
+                    <div class="story-item" id="story-location-1-04-purchase">
+                        <div class="story-title">购买</div>
+                        <div class="story-content story-locked">未解锁</div>
+                    </div>
+                    <div class="story-item" id="story-location-1-04-develop">
+                        <div class="story-title">宠物店</div>
+                        <div class="story-content story-locked">未解锁</div>
+                    </div>
+                    <div class="story-item" id="story-location-1-04-after-1">
+                        <div class="story-title">后续1</div>
+                        <div class="story-content story-locked">未解锁</div>
+                    </div>
+                    <div class="story-item" id="story-location-1-04-after-2">
+                        <div class="story-title">后续2</div>
+                        <div class="story-content story-locked">未解锁</div>
+                    </div>
+                    <div class="story-item" id="story-location-1-04-after-3">
+                        <div class="story-title">后续3</div>
+                        <div class="story-content story-locked">未解锁</div>
+                    </div>
+                    <div class="story-item" id="story-location-1-04-after-4">
+                        <div class="story-title">后续4</div>
+                        <div class="story-content story-locked">未解锁</div>
+                    </div>
+                </div>
+                
+                <div class="subcategory">
+                    <div class="subcategory-title">塔拉萨 (Thalassa)</div>
+                    <div class="story-item" id="story-location-1-05-purchase">
+                        <div class="story-title">购买</div>
+                        <div class="story-content story-locked">未解锁</div>
+                    </div>
+                    <div class="story-item" id="story-location-1-05-develop">
+                        <div class="story-title">零食店</div>
+                        <div class="story-content story-locked">未解锁</div>
+                    </div>
+                    <div class="story-item" id="story-location-1-05-after-1">
+                        <div class="story-title">后续1</div>
+                        <div class="story-content story-locked">未解锁</div>
+                    </div>
+                    <div class="story-item" id="story-location-1-05-after-2">
+                        <div class="story-title">后续2</div>
+                        <div class="story-content story-locked">未解锁</div>
+                    </div>
+                    <div class="story-item" id="story-location-1-05-after-3">
+                        <div class="story-title">后续3</div>
+                        <div class="story-content story-locked">未解锁</div>
+                    </div>
+                </div>
+                
+                <div class="subcategory">
+                    <div class="subcategory-title">塔尔吉森林 (Tulgey Wood)</div>
+                    <div class="story-item" id="story-location-1-06-purchase">
+                        <div class="story-title">购买</div>
+                        <div class="story-content story-locked">未解锁</div>
+                    </div>
+                    <div class="story-item" id="story-location-1-06-develop">
+                        <div class="story-title">占卜屋</div>
+                        <div class="story-content story-locked">未解锁</div>
+                    </div>
+                    <div class="story-item" id="story-location-1-06-after-1">
+                        <div class="story-title">后续1</div>
+                        <div class="story-content story-locked">未解锁</div>
+                    </div>
+                    <div class="story-item" id="story-location-1-06-after-2">
+                        <div class="story-title">后续2</div>
+                        <div class="story-content story-locked">未解锁</div>
+                    </div>
+                    <div class="story-item" id="story-location-1-06-after-3">
+                        <div class="story-title">后续3</div>
+                        <div class="story-content story-locked">未解锁</div>
+                    </div>
+                </div>
+                
+                <div class="subcategory">
+                    <div class="subcategory-title">奇里起亚 (Cilicia)</div>
+                    <div class="story-item" id="story-location-1-07-purchase">
+                        <div class="story-title">购买</div>
+                        <div class="story-content story-locked">未解锁</div>
+                    </div>
+                    <div class="story-item" id="story-location-1-07-develop">
+                        <div class="story-title">研究院</div>
+                        <div class="story-content story-locked">未解锁</div>
+                    </div>
+                    <div class="story-item" id="story-location-1-07-after-1">
+                        <div class="story-title">后续1</div>
+                        <div class="story-content story-locked">未解锁</div>
+                    </div>
+                    <div class="story-item" id="story-location-1-07-after-2">
+                        <div class="story-title">后续2</div>
+                        <div class="story-content story-locked">未解锁</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="manual-section" id="wander-section">
+                <!-- 去掉"漫游地点"二级标题，直接显示各个漫游地点 -->
+                <div class="subcategory">
+                    <div class="subcategory-title">海滩</div>
+                    <div class="story-item" id="story-wander-1">
+                        <div class="story-content story-locked">未解锁</div>
+                    </div>
+                </div>
+                
+                <div class="subcategory">
+                    <div class="subcategory-title">室内冰场</div>
+                    <div class="story-item" id="story-wander-2">
+                        <div class="story-content story-locked">未解锁</div>
+                    </div>
+                </div>
+                
+                <div class="subcategory">
+                    <div class="subcategory-title">Livehouse</div>
+                    <div class="story-item" id="story-wander-3">
+                        <div class="story-content story-locked">未解锁</div>
+                    </div>
+                </div>
+                
+                <div class="subcategory">
+                    <div class="subcategory-title">觅食</div>
+                    <div class="story-item" id="story-wander-4">
+                        <div class="story-content story-locked">未解锁</div>
+                    </div>
+                </div>
+                
+                <div class="subcategory">
+                    <div class="subcategory-title">魔法学院</div>
+                    <div class="story-item" id="story-wander-5">
+                        <div class="story-content story-locked">未解锁</div>
+                    </div>
+                </div>
+                
+                <div class="subcategory">
+                    <div class="subcategory-title">西部酒馆</div>
+                    <div class="story-item" id="story-wander-6">
+                        <div class="story-content story-locked">未解锁</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="manual-section" id="fate-section">
+                <!-- 去掉"命运事件"二级标题，直接显示各个命运事件 -->
+                <div class="subcategory">
+                    <div class="subcategory-title">拾金不昧</div>
+                    <div class="story-item" id="story-fate-1">
+                        <div class="story-content story-locked">未解锁</div>
+                    </div>
+                </div>
+                
+                <div class="subcategory">
+                    <div class="subcategory-title">不灵不要钱</div>
+                    <div class="story-item" id="story-fate-2">
+                        <div class="story-content story-locked">未解锁</div>
+                    </div>
+                </div>
+                
+
+                
+                <div class="subcategory">
+                    <div class="subcategory-title">恐怖的后室</div>
+                    <div class="story-item" id="story-fate-4">
+                        <div class="story-content story-locked">未解锁</div>
+                    </div>
+                </div>
+                
+                <div class="subcategory">
+                    <div class="subcategory-title">地府电台</div>
+                    <div class="story-item" id="story-fate-5">
+                        <div class="story-content story-locked">未解锁</div>
+                    </div>
+                </div>
+                
+                <div class="subcategory">
+                    <div class="subcategory-title">好麻吉</div>
+                    <div class="story-item" id="story-fate-6">
+                        <div class="story-content story-locked">未解锁</div>
+                    </div>
+                </div>
+                
+                <div class="subcategory">
+                    <div class="subcategory-title">MISSING DOG</div>
+                    <div class="story-item" id="story-fate-7">
+                        <div class="story-content story-locked">未解锁</div>
+                    </div>
+                </div>
+                
+                <div class="subcategory">
+                    <div class="subcategory-title">Make a wish</div>
+                    <div class="story-item" id="story-fate-8">
+                        <div class="story-content story-locked">未解锁</div>
+                    </div>
+                </div>
+                
+                <div class="subcategory">
+                    <div class="subcategory-title">外星人入侵</div>
+                    <div class="story-item" id="story-fate-9">
+                        <div class="story-content story-locked">未解锁</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="manual-section" id="chance-section">
+                <!-- 去掉"机会事件"二级标题，直接显示各个机会事件 -->
+                <div class="subcategory">
+                    <div class="subcategory-title">出海日</div>
+                    <div class="story-item" id="story-chance-1">
+                        <div class="story-content story-locked">未解锁</div>
+                    </div>
+                </div>
+                
+                <div class="subcategory">
+                    <div class="subcategory-title">演出日</div>
+                    <div class="story-item" id="story-chance-2">
+                        <div class="story-content story-locked">未解锁</div>
+                    </div>
+                </div>
+                
+                <div class="subcategory">
+                    <div class="subcategory-title">Hitchhiker</div>
+                    <div class="story-item" id="story-chance-3">
+                        <div class="story-content story-locked">未解锁</div>
+                    </div>
+                </div>
+                
+                <div class="subcategory">
+                    <div class="subcategory-title">编外人员</div>
+                    <div class="story-item" id="story-chance-4">
+                        <div class="story-content story-locked">未解锁</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>  //大概这里开始是剧情内容部分
+        document.addEventListener('DOMContentLoaded', function() {
+            // 游戏状态
+            const gameState = {
+                money: 13000,
+                properties: {},
+                currentPosition: 0,
+                dayCount: 0,
+                totalDays: 0,
+                playerName: "未知用户101115",
+                unlockedStories: {},
+                // 计算总剧情数：地产剧情+漫游分支+机会分支
+                totalPropertyStories: 28, // 地产剧情总数（购买+开发+后续）
+                totalWanderBranches: 13,  // 漫游选项分支总数
+                totalChanceBranches: 6,   // 机会选项分支总数
+                totalFateEvents: 8,       // 命运事件总数
+                totalStories: 0,          // 总剧情数，将在初始化时计算
+                eventVisits: {},
+                
+                readyForCompletion: false,
+                // 地图顺序：起点、恶灵岛、塔尔塔洛斯、机会、特兰西瓦尼亚、雷蒙盖顿街、命运、漫游、塔拉萨、机会、塔尔吉森林、命运、漫游、奇里起亚、任意门
+                boardCells: [
+                    { id: 0, name: "起点", type: "start", description: "入口" },
+                    { id: 1, name: "恶灵岛", englishName: "Onigashima", type: "property", price: 2700, developmentType: "拉面馆", developmentPrice: 1200, description: "征名大赛火热进行中！桃子里蹦出来的这个孩子究竟应该叫MOMO酱还是桃敢当呢？！" },
+                    { id: 2, name: "塔尔塔洛斯", englishName: "Tartarus", type: "property", price: 3100, developmentType: "酒店", developmentPrice: 2100, description: "我在地狱很想你。" },
+                    { id: 3, name: "机会", type: "chance", description: "浪漫" },
+                    { id: 4, name: "特兰西瓦尼亚", englishName: "Transylvania", type: "property", price: 4500, developmentType: "晚报社", developmentPrice: 1500, description: "吸血鬼们的故乡，入乡请随俗。" },
+                    { id: 5, name: "雷蒙盖顿街", englishName: "Lemegeton St.", type: "property", price: 3500, developmentType: "宠物店", developmentPrice: 2000, description: "31区灰色地带，遇到危险的话可以去求助，有很多神秘组织驻扎；没有危险的话没关系，那里也有很多。" },
+                    { id: 6, name: "命运", type: "fate", description: "命运" },
+                    { id: 7, name: "漫游", type: "wander", description: "随机探索" },
+                    { id: 8, name: "塔拉萨", englishName: "Thalassa", type: "property", price: 2700, developmentType: "零食店", developmentPrice: 1200, description: "新亚特兰蒂斯政权的军事指挥中心，分化前的向导和哨兵都在这里培训。" },
+                    { id: 9, name: "机会", type: "chance", description: "浪漫" },
+                    { id: 10, name: "塔尔吉森林", englishName: "Tulgey Wood", type: "property", price: 2000, developmentType: "占卜屋", developmentPrice: 1000, description: "隐约看见那只穿着西装系着领结的毛绒小狗往这里来了。" },
+                    { id: 11, name: "命运", type: "fate", description: "命运" },
+                    { id: 12, name: "漫游", type: "wander", description: "随机探索" },
+                    { id: 13, name: "奇里起亚", englishName: "Cilicia", type: "property", price: 2500, developmentType: "研究院", developmentPrice: 1700, description: "海妖出没！为了您的安全，请勿下海～" },
+                    { id: 14, name: "任意门", type: "anywheredoor", englishName: "Anywhere-door", description: "Knock knock!" }
+                ],
+                wanderDestinations: [
+                    { 
+                        id: "2-01",
+                        name: "海滩",
+                        storyId: "story-wander-1",
+                        description: '带着十字架耳钉的美人鱼出现了："请问你丢的是金子做的鱼，还是银子做的鱼？"',
+                        options: [
+                            { text: "金子做的鱼", effect: "你是个不诚实的孩子，河神生气地离开了。<br>财富-1000", moneyChange: -1000, log: "选择了金子做的鱼，被河神惩罚。财富-1000" },
+                            { text: "银子做的鱼", effect: "你是个不诚实的孩子，河神生气地离开了。<br>财富-500", moneyChange: -500, log: "选择了银子做的鱼，被河神惩罚。财富-500" },
+                            { text: "没有钓到鱼", effect: '你是个诚实的孩子，美人鱼开心地送了你两只活蹦乱跳的大鱼，说没钓到没关系，这是他和他的男朋友刚钓到的！厉害吧？', moneyChange: 0, log: "诚实回答没有钓到鱼，获得美人鱼赠送的大鱼" }
+                        ]
+                    },
+                    { 
+                        id: "2-02",
+                        name: "室内冰场",
+                        storyId: "story-wander-2",
+                        description: "想念冬天的时候可以来，别忘记穿外套。",
+                        options: [
+                            { text: "滑冰", effect: '结识了新来的员工Evan。他说自己来自很冷很冷的地方，所以在这个地方工作感到很舒适；擅长冷冻点东西什么的，在这里更是专业对口；个人技是吃雪糕绝对不会滴！', moneyChange: 0, log: "在冰场滑冰，认识了员工Evan" },
+                            { text: "小卖部", effect: '结识了客人Jake。交谈起来让人感到很舒适的一位，有礼貌且细心，似乎是这里的常客，和工作人员相熟，热情地请你吃了关东煮；似乎不太相信外星人，但很相信民间传说，例如雪女的故事。', moneyChange: 0, log: "在小卖部吃关东煮，认识了客人Jake" }
+                        ]
+                    },
+                    { 
+                        id: "2-03",
+                        name: "Livehouse",
+                        storyId: "story-wander-3",
+                        description: "听说今晚有支小有名气的高中生乐队演出。",
+                        options: [
+                            { text: "观众席", effect: "乐队的大家打扮得十分新潮，对比之下顺毛黑发的那位键盘手显得格外乖巧，像小狗似的。", moneyChange: 0, log: "在观众席观看演出，注意到乖巧的键盘手" },
+                            { text: "二层包厢", effect: '隔壁桌的客人染了灰金色头发、带着长耳链，长得实在太赏心悦目，让人很难忍住不多看两眼；或许乐队的键盘手也是这样想的吗？今晚向二楼观众席打了好多次招呼呢。', moneyChange: 0, log: "在二层包厢观看演出，注意到灰金色头发客人和键盘手的互动" }
+                        ]
+                    },
+                    { 
+                        id: "2-04",
+                        name: "觅食",
+                        storyId: "story-wander-4",
+                        description: "爱吃饭当然是优点^o^",
+                        options: [
+                            { text: "汤饭", effect: '想吃点热乎乎的东西的时候，首选是汤饭。<br>——这么小的店门口为什么有辆颜色饱和度这么高的跑车，在拍《公主小妹》吗？', moneyChange: 0, log: "选择了汤饭，发现店门口有辆颜色鲜艳的跑车" },
+                            { text: "刨冰", effect: '在刨冰店遇到了一对中学生情侣。似乎是常客，被老板打趣的时候会害羞地狡辩说，只是一起出来写作业而已，真的。', moneyChange: 0, log: "选择了刨冰，观察到高中生情侣" } ,
+                            { text: "果酱炸鸡", effect: '隔壁桌的那对情侣似乎在讨论吃完该看哪一场电影，看完电影又该去哪个球馆打球，在热恋吧？', moneyChange: 0, log: "选择了果酱炸鸡，观察到隔壁桌热恋的情侣" }
+                        ]
+                    },
+                    { 
+                        id: "2-05",
+                        name: "魔法学院",
+                        storyId: "story-wander-5",
+                        description: "世道不好，魔法学院现在不包毕业也不包分配工作哦亲亲。",
+                        options: [
+                            { text: "魔药学", effect: '运气特别好，今日是特聘了魔药学专家李教授来上课呢！但是教授魔女帽里露出来那对灰色耳朵是什么？', moneyChange: 0, log: "选择了魔药学，发现教授帽子里有灰色耳朵" },
+                            { text: "饮食魔法", effect: '这门课的讲师喜欢一边做饭一边讲故事，今天回忆的是她当年那位得意门生一碗拉面拿下全班最高分。', moneyChange: 0, log: "选择了饮食魔法，听讲师讲述得意门生的故事" }
+                        ]
+                    },
+                    { 
+                        id: "2-06",
+                        name: "西部酒馆",
+                        storyId: "story-wander-6",
+                        description: "不用担心找不到。荒原最大的十字路口、最显眼又最吵闹的那家店就是。",
+                        options: [
+                            { text: "吧台", effect: '刚点完单旁边就来了位新客人。年轻的牛仔，帅气的脸蛋、皱着眉头很是性感的样子让人心脏怦怦，但还是不如反手去取后腰上别着的东西的时候让人心脏怦怦怦怦——结果只是一把口琴——最后红着耳朵送给了调酒师Heli。', moneyChange: 0, log: "观察客人，看到牛仔送口琴给调酒师" }
+                        ]
+                    }
+                ],
+                fateEvents: [
+                    {
+                        id: "3-01",
+                        storyId: "story-fate-1",
+                        name: "拾金不昧",
+                        content: "捡到了一枚造型奇特的黄金符文，咬了一口确定不是巧克力；被雷蒙盖顿街上那家事务所重金赎走了<br>财富+3000",
+                        moneyChange: 3000,
+                        log: "捡到黄金符文并归还，获得3000奖励"
+                    },
+                    {
+                        id: "3-02",
+                        storyId: "story-fate-2",
+                        name: "不灵不要钱",
+                        content: "前往银桥知名玄学小铺算命，购买了一串可以带来好运的粉水晶～祝你天天开心！<br>财富-313",
+                        moneyChange: -313,
+                        log: "购买了粉水晶，花费313"
+                    },
+                    {
+                        id: "3-04",
+                        storyId: "story-fate-4",
+                        name: "恐怖的后室",
+                        content: "玩游戏遇到了很可靠的队友。一位似乎有点胆小，但又很热衷与怪物合影；一位说话声音小小，总感觉在cos角落萌物，关键时刻又总能解救大家。希望能和两位成为固定队友！",
+                        moneyChange: 0,
+                        log: "在游戏中遇到了可靠的队友"
+                    },
+                    {
+                        id: "3-05",
+                        storyId: "story-fate-5",
+                        name: "地府电台",
+                        content: "Jake的电台节目调整为了双档，新主持人来了以后节目开场曲从招魂曲变成了《ふわふわ時間（轻飘飘的时间）》，是要向情感类节目转型了吗？",
+                        moneyChange: 0,
+                        log: "发现地府电台节目风格转变"
+                    },
+                    {
+                        id: "3-06",
+                        storyId: "story-fate-6",
+                        name: "好麻吉",
+                        content: "和几位吸血鬼朋友们夜游游乐园，体验了旋转墓马、碰碰棺材和古堡迷宫。似乎他们更害怕一点？",
+                        moneyChange: 0,
+                        log: "与吸血鬼朋友夜游游乐园"
+                    },
+                    {
+                        id: "3-07",
+                        storyId: "story-fate-7",
+                        name: "MISSING DOG",
+                        content: "捡到一张很没诚意的寻狗启事，贴的照片明明是迪士尼王子；写着请好心人看见了千万不要送到城堡去，请送到三个山头外的那片森林，谢谢。",
+                        moneyChange: 0,
+                        log: "发现一张奇怪的寻狗启事"
+                    },
+                    {
+                        id: "3-08",
+                        storyId: "story-fate-8",
+                        name: "Make a wish",
+                        content: "在图书馆借来的书里翻到了一张电影票，11时15分在02号厅上映，隐约能看清电影名的前三个字是侏罗纪。",
+                        moneyChange: 0,
+                        log: "在图书馆的书里发现一张电影票"
+                    },
+                    {
+                        id: "3-09",
+                        storyId: "story-fate-9",
+                        name: "外星人入侵",
+                        content: "坐在UFO上的分明是小狗和仓鼠啊？到底是谁在谣传有外星人！",
+                        moneyChange: 0,
+                        log: "发现所谓的外星人其实是小狗和仓鼠"
+                    }
+                ],
+                chanceEvents: [
+                    {
+                        id: "4-01",
+                        storyId: "story-chance-1",
+                        name: "出海日",
+                        content1: "遇到了饿肚子的多莉丝，一段激烈的触手语过后终于明白：她想吃拉面。",
+                        conditions: [
+                            {
+                                check: "hasProperty",
+                                propertyId: 1,
+                                text: "拥有拉面馆。多莉丝饱餐一顿后送给你一箱海底的奇珍异宝<br>财富+2000",
+                                moneyChange: 2000,
+                                log: "拥有拉面馆，多莉丝赠送一箱海底奇珍异宝，财富+2000"
+                            },
+                            {
+                                check: "default",
+                                text: "未拥有拉面馆。多莉丝生气地离开了，并表示下次真的会吃掉你哦！（不会）",
+                                moneyChange: 0,
+                                log: "未拥有拉面馆，多莉丝生气离开"
+                            }
+                        ]
+                    },
+                    {
+                        id: "4-02",
+                        storyId: "story-chance-2",
+                        name: "演出日",
+                        content1: "在路上被高中生发了传单，说是他们自己组建的乐队，今晚在学校门口有公益路演。",
+                        conditions: [
+                            {
+                                check: "wanderChoice",
+                                wanderId: "2-03",
+                                choiceText: "二层包厢",
+                                text: "在路演现场又看到了灰金色头发的那位。演出结束后很自然地给那个高中生键盘手送了水和毛巾，原来是一对吗？",
+                                moneyChange: 0,
+                                log: "在路演现场看到灰金色头发的人和键盘手互动"
+                            },
+                            {
+                                check: "default",
+                                text: "演出进行中，观众们开始传递义卖传单。递给旁边那位男生的时候听见他的朋友打趣，问如果那个键盘手也在义卖单上的话打算出多少钱竞拍。<br>……？！",
+                                moneyChange: 0,
+                                log: "在路演现场听到关于键盘手的有趣对话"
+                            }
+                        ]
+                    },
+                    {
+                        id: "4-03",
+                        storyId: "story-chance-3",
+                        name: "Hitchhiker",
+                        content1: "在去特兰西瓦尼亚的路上遇到了想搭便车的短发美女，穿得太时尚，空气湿度上涨3.1%。",
+                        options: [
+                            { text: "同意", effect: "比看起来亲和得多，很是健谈，看起来对音乐很感兴趣，下车前还交换了联系方式；但当晚发现珍藏的车载CD全都不翼而飞<br>财富-700", moneyChange: -700, log: "同意搭便车，结果车载CD被偷" },
+                            { text: "不同意", effect: "好像有点不礼貌——但是做得好。认识的那位吸血鬼朋友如是说，“她以前也拿走过我们的CD呢！”", moneyChange: 0, log: "不同意搭便车，后来得知那是个CD小偷" }
+                        ]
+                    },
+                    {
+                        id: "4-04",
+                        storyId: "story-chance-4",
+                        name: "编外人员",
+                        content1: "隔壁事务所又要去团建，并且热情邀请、盛情难却。",
+                        options: [
+                            { text: "去26区", effect: "夸早了。原来是几个26区黑名单缺一个能刷开门禁的遵纪守法好公民而已。", moneyChange: 0, log: "选择去26区团建，发现是去帮忙刷门禁" },
+                            { text: "去温迪森林", effect: "咦，这只兔子好眼熟，怪可爱的；咦，突然之间全都消失是什么意思——声明：最后没有人受伤。", moneyChange: 0, log: "选择去温迪森林团建，遇到神秘消失的兔子" }
+                        ]
+                    }
+                ],
+                propertyEvents: {
+                    1: { // 恶灵岛
+                        purchase: {
+                            storyId: "story-location-1-01-purchase",
+                            title: "恶灵岛主人的招待",
+                            description: "前往恶灵岛视察。恶灵岛岛主和他的男朋友，还有他家的奶油色小狗好热情，不得不说他们的拉面煮得很好吃呢！",
+                            log: "购买恶灵岛后，受到主人热情招待，品尝了美味拉面"
+                        },
+                        development: {
+                            initial: {
+                                storyId: "story-location-1-01-develop",
+                                title: "拉面馆开业",
+                                description: "对岛上两位的手艺念念不忘，决定投资开一家拉面店冲击米其林（？）！",
+                                log: "在恶灵岛开发了拉面馆，决定冲击米其林"
+                            },
+                            firstVisitAfter: {
+                                description: "尝遍菜单，决定选择云朵鸡蛋作为心中不可动摇NO.1。",
+                                storyId: "story-location-1-01-after-1"
+                            },
+                            subsequentVisits: {
+                                description: "今日生意不错。<br>财富+200",
+                                moneyChange: 200,
+                                storyId: "story-location-1-01-after-2"
+                            }
+                        }
+                    },
+                    2: { // 塔尔塔洛斯
+                        purchase: {
+                            storyId: "story-location-1-02-purchase",
+                            title: "冥河渡船",
+                            description: "进入塔尔塔洛斯的冥河渡船仅接受投币支付，切记。",
+                            log: "购买塔尔塔洛斯，了解到冥河渡船的支付方式"
+                        },
+                        development: {
+                            initial: {
+                                storyId: "story-location-1-02-develop",
+                                title: "酒店开业",
+                                description: "今天我们相聚在这里，是为了庆祝Wonderland酒店公寓正式开业！资质不够无法获得天堂签证吗？没关系！特色天堂主题酒店欢迎您！",
+                                log: "在塔尔塔洛斯开发了酒店，举行了开业庆典"
+                            },
+                            firstVisitAfter: {
+                                description: "农历七月鬼魂出游高峰期，小赚一笔，嘿嘿。<br>财富+2000",
+                                moneyChange: 2000,
+                                storyId: "story-location-1-02-after-1"
+                            },
+                            secondVisitAfter: {
+                                description: "调酒师的手艺很不错，但是为什么连股东都不能喝那杯独门特调？小气！",
+                                storyId: "story-location-1-02-after-2"
+                            },
+                            thirdVisitAfter: {
+                                description: "试图偷听两位调酒师恋爱，顺便偷学手艺。",
+                                storyId: "story-location-1-02-after-3"
+                            },
+                            subsequentVisits: {
+                                description: "今日酒店入住率很高。<br>财富+300",
+                                moneyChange: 300,
+                                storyId: "story-location-1-02-after-4"
+                            }
+                        }
+                    },
+                    4: { // 特兰西瓦尼亚
+                        purchase: {
+                            storyId: "story-location-1-03-purchase",
+                            title: "吸血鬼保养秘籍",
+                            description: "温馨提示，为了保护吸血鬼的牙齿健康，请冬天注意保暖夏季注意散热，獠牙保养一千年的秘籍是忌冷热。",
+                            log: "购买特兰西瓦尼亚，获得吸血鬼牙齿保养秘籍"
+                        },
+                        development: {
+                            initial: {
+                                storyId: "story-location-1-03-develop",
+                                title: "晚报社创刊",
+                                description: "《Vampire‘s Nightly》首刊正式发行！想知道吸血鬼最近流行的时尚趋势？想要查看最新的血族点评必吃榜餐厅？欢迎订阅！",
+                                log: "在特兰西瓦尼亚开发了晚报社，《Vampire‘s Nightly》首刊发行"
+                            },
+                            firstVisitAfter: {
+                                description: "报社新来的编辑送来一本《Vamgue》和一包牙钻，说最近吸血鬼之间流行咕牙。",
+                                storyId: "story-location-1-03-after-1"
+                            },
+                            secondVisitAfter: {
+                                description: "吸血鬼的时尚风向怎么变得这么快？！这回流行的是痛斗篷。",
+                                storyId: "story-location-1-03-after-2"
+                            },
+                            thirdVisitAfter: {
+                                description: "在中古市场淘到了吸血鬼猎人的工具箱，决定送给报社的大家当痛包（？）",
+                                storyId: "story-location-1-03-after-3"
+                            },
+                            subsequentVisits: {
+                                description: "订阅量不尽人意，发行部悲愤表示纸媒已死要不我们转行干自媒体吧？！报纸实在太老掉牙。答曰吸血鬼难道很新潮吗？你们不也已经死了吗！<br>财富-50",
+                                moneyChange: -50,
+                                storyId: "story-location-1-03-after-4"
+                            }
+                        }
+                    },
+                    5: { // 雷蒙盖顿街
+                        purchase: {
+                            storyId: "story-location-1-04-purchase",
+                            title: "废弃厂房",
+                            description: "路过了一栋废弃厂房，但里面很是热闹的样子。门口的招牌上写着咖啡厅试营业，本来想进去看看的，结果发现金额以金币做单位遂作罢——好黑心哦。",
+                            log: "购买雷蒙盖顿街后，发现了一家价格昂贵的咖啡厅"
+                        },
+                        development: {
+                            initial: {
+                                storyId: "story-location-1-04-develop",
+                                title: "宠物店开业",
+                                description: "宠物店开业了，就在之前经过的那栋厂房边上。原来他们的主业不是卖咖啡——定价这么高他们真的卖出去过吗——虽然好像很贪心，但人都还蛮好的，介绍了许多客人呢，虽然有的客人在视觉上很奇形怪状。",
+                                log: "在雷蒙盖顿街开发了宠物店，迎来了许多特别的客人"
+                            },
+                            firstVisitAfter: {
+                                description: "客人奇形怪状也就算了，怎么宠物们也这么奇形怪状！",
+                                storyId: "story-location-1-04-after-1"
+                            },
+                            secondVisitAfter: {
+                                description: "隔壁事务所外出团建，出发前来店里买鱼饵，回来后买的是兔笼。这是什么新品种？水里也能钓到兔子了吗？",
+                                storyId: "story-location-1-04-after-2"
+                            },
+                            thirdVisitAfter: {
+                                description: "隔壁事务所的沈主理人有事没事就来店里逗狗玩，甚至免费帮忙遛狗，真善良！",
+                                storyId: "story-location-1-04-after-3"
+                            },
+                            subsequentVisits: {
+                                description: "店内新规：宠物洗澡美容按表面积收费。否则真是便宜了那些养九头蛇和九尾狐的家伙！<br>财富+200",
+                                moneyChange: 200,
+                                storyId: "story-location-1-04-after-4"
+                            }
+                        }
+                    },
+                    8: { // 塔拉萨
+                        purchase: {
+                            storyId: "story-location-1-05-purchase",
+                            title: "食堂吐槽",
+                            description: "塔的食堂厨师一定是关系户，怎么能这么难吃？",
+                            log: "购买塔拉萨，吐槽食堂难吃"
+                        },
+                        development: {
+                            initial: {
+                                storyId: "story-location-1-05-develop",
+                                title: "零食店开业",
+                                description: "听说指挥中心的Evan调去其他小队了，可是他推荐进货的葡萄软糖还没到呢。",
+                                log: "在塔拉萨开发了零食店，等待Evan推荐的葡萄软糖"
+                            },
+                            firstVisitAfter: {
+                                description: "得益于食堂，泡面简直一百分畅销。<br>财富+150",
+                                moneyChange: 150,
+                                storyId: "story-location-1-05-after-1"
+                            },
+                            secondVisitAfter: {
+                                description: "又见到Evan了，带着一位眼生的新朋友，一进门就拿了三包葡萄软糖，很识货！",
+                                storyId: "story-location-1-05-after-2"
+                            },
+                            subsequentVisits: {
+                                description: "泡面泡面我们喜欢你。<br>财富+100",
+                                moneyChange: 100,
+                                storyId: "story-location-1-05-after-3"
+                            }
+                        }
+                    },
+                    10: { // 塔尔吉森林
+                        purchase: {
+                            storyId: "story-location-1-06-purchase",
+                            title: "下午茶派对",
+                            description: "打着领结的毛绒小狗、喜欢薄巧蛋糕的粉色狐狸和睡在茶杯里的黄色小鸭热情地招待你和另一位误闯此地的人类共进下午茶。",
+                            log: "购买塔尔吉森林，参加了动物们的下午茶派对"
+                        },
+                        development: {
+                            initial: {
+                                storyId: "story-location-1-06-develop",
+                                title: "占卜屋开业",
+                                description: "银桥进修归来，重金采购电子乩盘，轻磅进军玄学界。",
+                                log: "在塔尔吉森林开发了占卜屋，采购了电子乩盘"
+                            },
+                            firstVisitAfter: {
+                                description: "客人来访，问家里的小狗不理自己怎么办？<br>水晶球隐隐浮现几个字母Z：他只是睡着了。",
+                                storyId: "story-location-1-06-after-1"
+                            },
+                            secondVisitAfter: {
+                                description: "客人来访，问自己家哥哥喜欢猫不喜欢狗怎么办？<br>于是从柜子里掏出一对猫耳发箍：有时候不是所有问题都需要依赖玄学的。",
+                                storyId: "story-location-1-06-after-2"
+                            },
+                            subsequentVisits: {
+                                description: "考虑盘下隔壁的店铺开一间恋爱咨询室。<br>财富+120",
+                                moneyChange: 120,
+                                storyId: "story-location-1-06-after-3"
+                            }
+                        }
+                    },
+                    13: { // 奇里起亚
+                        purchase: {
+                            storyId: "story-location-1-07-purchase",
+                            title: "海妖贴士",
+                            description: "据说海妖喜欢喝◯◯可乐，下海时可以随身携带以备不时之需。",
+                            log: "购买奇里起亚，获得与海妖相处的贴士"
+                        },
+                        development: {
+                            initial: {
+                                storyId: "story-location-1-07-develop",
+                                title: "研究院成立",
+                                description: "高价聘请了著名的沈教授坐镇研究院，还自带了一位长得很漂亮的翻译，据说可以和所有类别的海妖无障碍沟通，不知道是在哪里进修的，好厉害。",
+                                log: "在奇里起亚开发了研究院，聘请了沈教授和李翻译"
+                            },
+                            firstVisitAfter: {
+                                description: "叫做多莉丝的海怪似乎和李翻译关系很好，总在研究院边上的海域游来游去，再把触手伸出海面打招呼。",
+                                storyId: "story-location-1-07-after-1"
+                            },
+                            subsequentVisits: {
+                                description: "沈教授的论文还在修改中；李翻译主笔的《论海洋方言》有望先一步发表。",
+                                storyId: "story-location-1-07-after-2"
+                            }
+                        }
+                    }
+                },
+                specialEvents: {
+                    bankruptcy: {
+                        id: "5-01",
+                        name: "破产",
+                        content: "扇钱包两巴掌希望它能自己肿起来。",
+                        options: [
+                            { text: "十一十一我们喜欢你(不喜欢也没关系)", effect: "十一就是这样一个莫名其妙但能给你带来救助金的人<br>财富+31000", moneyChange: 31000, log: "呼唤十一获得救助金31000" }
+                        ]
+                    },
+                    completion: {
+                        id: "5-02",
+                        name: "通关",
+                        content: "剧情全解锁达成~!",
+                        options: [
+                            { text: "喜欢您来", effect: "与其说Ending不如说是是就写了这么多。", moneyChange: 0, log: "完成游戏，看到通关画面" }
+                        ]
+                    }
+                }
+            };
+
+            // 计算总剧情数
+            gameState.totalStories = gameState.totalPropertyStories + 
+                                   gameState.totalWanderBranches + 
+                                   gameState.totalChanceBranches +
+                                   gameState.totalFateEvents;
+
+            // DOM元素
+            const startScreen = document.getElementById('start-screen');
+            const diceScreen = document.getElementById('dice-screen');
+            const eventScreen = document.getElementById('event-screen');
+            const gameBoard = document.getElementById('game-board');
+            const eventCardContainer = document.getElementById('event-card-container');
+            
+            const startBtn = document.getElementById('start-btn');
+            const rollBtn = document.getElementById('roll-btn');
+            const continueBtn = document.getElementById('continue-btn');
+            
+            const moneyDisplay = document.getElementById('money');
+            const dayCountDisplay = document.getElementById('dayCount');
+            const playerNameDisplay = document.getElementById('playerName');
+            const currentDayDisplay = document.getElementById('current-day');
+            const currentPositionDisplay = document.getElementById('current-position');
+            const diceDisplay = document.getElementById('dice');
+            const nameInput = document.getElementById('name-input');
+            const explorationProgressDisplay = document.getElementById('exploration-progress');
+            
+            const eventOptions = document.getElementById('event-options');
+            const eventEffect = document.getElementById('event-effect');
+            
+            const storyManualToggle = document.getElementById('story-manual-toggle');
+            const storyManualContainer = document.getElementById('story-manual-container');
+            const manualTabs = document.querySelectorAll('.manual-tab');
+            const manualSections = document.querySelectorAll('.manual-section');
+
+            // 初始化游戏地图
+            function initGameBoard() {
+                try {
+                    gameBoard.innerHTML = '';
+                    if (!gameState.boardCells || gameState.boardCells.length === 0) {
+                        console.error('地图数据为空');
+                        return;
+                    }
+                    
+                    gameState.boardCells.forEach(cell => {
+                        const cellElement = document.createElement('div');
+                        cellElement.className = `board-cell ${cell.type} ${cell.id === gameState.currentPosition ? 'current' : ''}`;
+                        
+                        let cellContent = `<div>${cell.name}</div>`;
+                        if (cell.id === gameState.currentPosition) {
+                            cellContent += '<div class="player-marker">你</div>';
+                        }
+                        if (cell.type === 'property') {
+                            cellContent += `<div class="text-xs">${cell.price}</div>`;
+                            
+                            if (gameState.properties[cell.id] && gameState.properties[cell.id].developed) {
+                                cellContent += `<div class="text-xs">${cell.developmentType}</div>`;
+                            }
+                        }
+                        
+                        cellElement.innerHTML = cellContent;
+                        gameBoard.appendChild(cellElement);
+                    });
+                } catch (error) {
+                    console.error('初始化地图时出错:', error);
+                }
+            }
+
+            // 初始化游戏
+            function initGame() {
+                try {
+                    gameState.money = 13000;
+                    gameState.properties = {};
+                    gameState.currentPosition = 0;
+                    gameState.dayCount = 0;
+                    gameState.totalDays = 0;
+                    gameState.unlockedStories = {};
+                    gameState.eventVisits = {};
+                    gameState.readyForCompletion = false;
+                    gameState.hasCompleted = false;
+                    
+                    const userName = nameInput.value.trim();
+                    if (userName) {
+                        gameState.playerName = userName;
+                        playerNameDisplay.textContent = userName;
+                    }
+                    
+                    initGameBoard();
+                    updateDisplays();
+                    updateStoryManual();
+                } catch (error) {
+                    console.error('初始化游戏时出错:', error);
+                }
+            }
+
+            // 更新显示
+            function updateDisplays() {
+                try {
+                    moneyDisplay.textContent = gameState.money;
+                    if (gameState.money < 0) {
+                        moneyDisplay.classList.add('negative-money');
+                        moneyDisplay.classList.remove('positive-money');
+                    } else if (gameState.money > 0) {
+                        moneyDisplay.classList.add('positive-money');
+                        moneyDisplay.classList.remove('negative-money');
+                    } else {
+                        moneyDisplay.classList.remove('negative-money', 'positive-money');
+                    }
+                    
+                    dayCountDisplay.textContent = gameState.totalDays;
+                    playerNameDisplay.textContent = gameState.playerName;
+                    currentDayDisplay.textContent = gameState.dayCount + 1;
+                    
+                    const currentCell = gameState.boardCells.find(cell => cell.id === gameState.currentPosition);
+                    currentPositionDisplay.textContent = currentCell ? currentCell.name : "未知";
+                    
+                    // 计算探索进度 - 按新规则计算
+                    let unlockedCount = 0;
+                    
+                    // 1. 地产剧情计数：每个"购买"、"开发"、"后续x"都算一个
+                    for (const storyId in gameState.unlockedStories) {
+                        if (storyId.startsWith('story-location')) {
+                            unlockedCount++;
+                        }
+                    }
+                    
+                    // 2. 漫游事件：每个选项分支算一个
+                    for (const storyId in gameState.unlockedStories) {
+                        if (storyId.startsWith('story-wander') && gameState.unlockedStories[storyId].branches) {
+                            unlockedCount += gameState.unlockedStories[storyId].branches.length;
+                        }
+                    }
+                    
+                    // 3. 机会事件：每个选项分支算一个
+                    for (const storyId in gameState.unlockedStories) {
+                        if (storyId.startsWith('story-chance') && gameState.unlockedStories[storyId].branches) {
+                            unlockedCount += gameState.unlockedStories[storyId].branches.length;
+                        }
+                    }
+                    
+                    // 4. 命运事件：每个事件算一个
+                    for (const storyId in gameState.unlockedStories) {
+                        if (storyId.startsWith('story-fate')) {
+                            unlockedCount++;
+                        }
+                    }
+                    
+                    // 确保进度不超过100%
+                    let progressPercentage = Math.round((unlockedCount / gameState.totalStories) * 100);
+                    progressPercentage = Math.min(progressPercentage, 100); // 限制最大值为100
+                    explorationProgressDisplay.textContent = progressPercentage;
+                    
+                    // 检查所有地产剧情是否都已解锁
+                    const allPropertyStoriesUnlocked = checkAllPropertyStoriesUnlocked();
+                    
+                    // 检查特殊条件 - 破产
+                    if (gameState.isBankrupt) {
+                        handleSpecialEvent('bankruptcy');
+                    }
+                    
+                    // 检查是否满足通关条件，如果满足则标记为准备好
+                    if (!gameState.hasCompleted && !gameState.readyForCompletion && 
+                        allPropertyStoriesUnlocked && progressPercentage >= 90) {
+                        gameState.readyForCompletion = true;
+                    }
+                } catch (error) {
+                    console.error('更新显示时出错:', error);
+                }
+            }
+
+            // 检查是否所有地产剧情都已解锁
+            function checkAllPropertyStoriesUnlocked() {
+                // 地产ID列表
+                const propertyIds = [1, 2, 4, 5, 8, 10, 13];
+                
+                // 检查每个地产的所有剧情是否都已解锁
+                for (const propId of propertyIds) {
+                    const propEvents = gameState.propertyEvents[propId];
+                    
+                    // 检查购买剧情
+                    if (!gameState.unlockedStories[propEvents.purchase.storyId]) {
+                        return false;
+                    }
+                    
+                    // 检查开发剧情
+                    if (!gameState.unlockedStories[propEvents.development.initial.storyId]) {
+                        return false;
+                    }
+                    
+                    // 检查后续剧情
+                    // 1. 检查首次访问
+                    if (propEvents.development.firstVisitAfter && 
+                        !gameState.unlockedStories[propEvents.development.firstVisitAfter.storyId]) {
+                        return false;
+                    }
+                    
+                    // 2. 检查第二次访问（如果存在）
+                    if (propEvents.development.secondVisitAfter && 
+                        !gameState.unlockedStories[propEvents.development.secondVisitAfter.storyId]) {
+                        return false;
+                    }
+                    
+                    // 3. 检查第三次访问（如果存在）
+                    if (propEvents.development.thirdVisitAfter && 
+                        !gameState.unlockedStories[propEvents.development.thirdVisitAfter.storyId]) {
+                        return false;
+                    }
+                    
+                    // 4. 检查后续访问（如果存在）
+                    if (propEvents.development.subsequentVisits && 
+                        !gameState.unlockedStories[propEvents.development.subsequentVisits.storyId]) {
+                        return false;
+                    }
+                }
+                
+                return true;
+            }
+
+            // 解锁剧情 - 支持主剧情和分支剧情
+            function unlockStory(storyId, mainContent, branch = null) {
+                if (!gameState.unlockedStories[storyId]) {
+                    gameState.unlockedStories[storyId] = {
+                        mainContent: mainContent,
+                        branches: []
+                    };
+                } 
+                else if (branch && !gameState.unlockedStories[storyId].branches.some(b => b.text === branch.text)) {
+                    gameState.unlockedStories[storyId].branches.push(branch);
+                }
+                
+                updateStoryManual();
+                updateDisplays();
+            }
+
+            // 更新剧情手册
+            function updateStoryManual() {
+                for (const [storyId, storyData] of Object.entries(gameState.unlockedStories)) {
+                    const storyElement = document.getElementById(storyId);
+                    if (storyElement) {
+                        const contentElement = storyElement.querySelector('.story-content');
+                        if (contentElement) {
+                            contentElement.classList.remove('story-locked');
+                            
+                            let contentHtml = `<p>${storyData.mainContent}</p>`;
+                            
+                            if (storyData.branches && storyData.branches.length > 0) {
+                                storyData.branches.forEach(branch => {
+                                    // 移除财富信息
+                                    const branchEffect = branch.effect.replace(/财富[+-]\d+/g, '').trim();
+                                    contentHtml += `<div class="story-branch"><strong>选择：</strong>${branch.text}<br>${branchEffect}</div>`;
+                                });
+                            }
+                            
+                            contentElement.innerHTML = contentHtml;
+                        }
+                    }
+                }
+            }
+
+            // 掷骰子
+            function rollDice() {
+                try {
+                    rollBtn.disabled = true;
+                    diceDisplay.textContent = "?";
+                    
+                    let rolls = 0;
+                    const totalRolls = 7;
+                    const rollInterval = setInterval(() => {
+                        const random = Math.floor(Math.random() * 6) + 1;
+                        diceDisplay.textContent = random;
+                        rolls++;
+                        if (rolls >= totalRolls) {
+                            clearInterval(rollInterval);
+                            setTimeout(() => {
+                                movePlayer(parseInt(diceDisplay.textContent));
+                                rollBtn.disabled = false;
+                            }, 300);
+                        }
+                    }, 60);
+                } catch (error) {
+                    console.error('掷骰子时出错:', error);
+                    rollBtn.disabled = false;
+                }
+            }
+
+            // 移动玩家
+            function movePlayer(steps) {
+                try {
+                    const totalCells = gameState.boardCells.length;
+                    let newPosition = gameState.currentPosition + steps;
+                    
+                    if (newPosition >= totalCells) {
+                        newPosition = newPosition % totalCells;
+                        gameState.money += 500;
+                        updateDisplays();
+                    }
+                    
+                    gameState.currentPosition = newPosition;
+                    initGameBoard();
+                    handleCellEvent(newPosition);
+                } catch (error) {
+                    console.error('移动玩家时出错:', error);
+                }
+            }
+
+            // 处理格子事件
+            function handleCellEvent(cellId) {
+                try {
+                    const cell = gameState.boardCells.find(c => c.id === cellId);
+                    if (!cell) {
+                        console.error(`找不到ID为${cellId}的格子`);
+                        continueGame();
+                        return;
+                    }
+                    
+                    eventEffect.classList.add('hidden');
+                    eventEffect.innerHTML = '';
+                    eventOptions.innerHTML = ''; // 清空之前的选项
+                    continueBtn.classList.add('hidden'); // 隐藏继续按钮
+                    
+                    // 重置破产状态
+                    gameState.isBankrupt = false;
+                    
+                    switch(cell.type) {
+                        case 'start':
+                            showStartEvent(cell);
+                            break;
+                        case 'property':
+                            showPropertyEvent(cell);
+                            break;
+                        case 'wander':
+                            showWanderEvent();
+                            break;
+                        case 'fate':
+                            showFateEvent();
+                            break;
+                        case 'chance':
+                            showChanceEvent();
+                            break;
+                        case 'anywheredoor':
+                            showAnywhereDoorEvent();
+                            break;
+                        default:
+                            console.warn(`未知的格子类型: ${cell.type}`);
+                            continueGame();
+                    }
+                    
+                    diceScreen.classList.add('hidden');
+                    eventScreen.classList.remove('hidden');
+                } catch (error) {
+                    console.error('处理格子事件时出错:', error);
+                    continueGame();
+                }
+            }
+
+            // 处理特殊事件
+            function handleSpecialEvent(eventType) {
+                const event = gameState.specialEvents[eventType];
+                if (!event) return;
+                
+                eventCardContainer.innerHTML = '';
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `
+                    <div class="card-header">
+                        <div class="card-title">${event.name}</div>
+                    </div>
+                    <div class="card-body">
+                        <p>${event.content}</p>
+                    </div>
+                    <div class="card-footer">@Shy1</div>
+                `;
+                eventCardContainer.appendChild(card);
+                
+                eventOptions.innerHTML = '';
+                
+                event.options.forEach(option => {
+                    const optBtn = document.createElement('button');
+                    optBtn.className = 'w-full px-4 py-2 rounded option-btn';
+                    optBtn.textContent = option.text;
+                    
+                    optBtn.addEventListener('click', () => {
+                        gameState.money += option.moneyChange;
+                        
+                        eventEffect.innerHTML = `<p>${option.effect}</p>`;
+                        eventEffect.classList.remove('hidden');
+                        
+                        updateDisplays();
+                        
+                        document.querySelectorAll('#event-options button').forEach(btn => {
+                            btn.disabled = true;
+                            btn.classList.add('opacity-70');
+                        });
+                        
+                        // 结局事件不显示继续按钮
+                        if (eventType !== 'completion') {
+                            // 破产后允许回到正常游戏
+                            gameState.isBankrupt = false;
+                            continueBtn.classList.remove('hidden');
+                        }
+                    });
+                    
+                    eventOptions.appendChild(optBtn);
+                });
+                
+                diceScreen.classList.add('hidden');
+                eventScreen.classList.remove('hidden');
+            }
+
+            // 创建房产卡片
+            function createPropertyCard(cell, isOwned) {
+                const card = document.createElement('div');
+                card.className = 'card property-card';
+                
+                let statusText = "您未购买此地产";
+                if (isOwned) {
+                    const property = gameState.properties[cell.id];
+                    statusText = property.developed 
+                        ? `您已购买并开发此地产 (${property.developmentType})` 
+                        : "您已购买此地产，未开发";
+                }
+                
+                card.innerHTML = `
+                    <div class="card-header">
+                        <div class="card-title">${cell.name}</div>
+                        <div class="card-subtitle">${cell.englishName}</div>
+                    </div>
+                    <div class="card-body">
+                        <p>${cell.description}</p>
+                        <p>价格：${cell.price}</p>
+                        <p>开发：${cell.developmentType} (${cell.developmentPrice})</p>
+                    </div>
+                    <div class="card-status">${statusText}</div>
+                    <div class="card-footer">@Shy1</div>
+                `;
+                
+                return card;
+            }
+
+            // 创建命运卡片
+            function createFateCard(event) {
+                const card = document.createElement('div');
+                card.className = 'card fate-card';
+                
+                card.innerHTML = `
+                    <div class="card-header">
+                        <div class="card-title">命运</div>
+                        <div class="card-subtitle">Fate</div>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>${event.name}</strong></p>
+                        <p>${event.content}</p>
+                    </div>
+                    <div class="card-footer">@Shy1</div>
+                `;
+                
+                return card;
+            }
+
+            // 创建机会卡片
+            function createChanceCard(event) {
+                const card = document.createElement('div');
+                card.className = 'card chance-card';
+                
+                card.innerHTML = `
+                    <div class="card-header">
+                        <div class="card-title">机会</div>
+                        <div class="card-subtitle">Romance</div>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>${event.name}</strong></p>
+                        <p>${event.content1}</p>
+                    </div>
+                    <div class="card-footer">@Shy1</div>
+                `;
+                
+                return card;
+            }
+
+            // 创建漫游卡片
+            function createWanderCard(title) {
+                const card = document.createElement('div');
+                card.className = 'card wander-card';
+                
+                card.innerHTML = `
+                    <div class="card-header">
+                        <div class="card-title">${title}</div>
+                        <div class="card-subtitle">Wander</div>
+                    </div>
+                    <div class="card-footer">@Shy1</div>
+                `;
+                
+                return card;
+            }
+
+            // 创建任意门卡片
+            function createAnywhereDoorCard() {
+                const card = document.createElement('div');
+                card.className = 'card anywheredoor-card';
+                
+                card.innerHTML = `
+                    <div class="card-header">
+                        <div class="card-title">任意门</div>
+                        <div class="card-subtitle">Anywhere-door</div>
+                    </div>
+                    <div class="card-body">
+                        <p>Knock knock!</p>
+                        <p>请选择1-15之间的数字作为前进步数：</p>
+                    </div>
+                    <div class="card-footer">@Shy1</div>
+                `;
+                
+                return card;
+            }
+
+            // 起点事件
+            function showStartEvent(cell) {
+                eventCardContainer.innerHTML = '';
+                
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `
+                    <div class="card-header">
+                        <div class="card-title">${cell.name}</div>
+                        <div class="card-subtitle">Elysium入口</div>
+                    </div>
+                    <div class="card-body">
+                        <p>${cell.description}</p>
+                        <p>走来走去辛苦了，辛苦费500><！</p>
+                    </div>
+                    <div class="card-footer">@Shy1</div>
+                `;
+                
+                eventCardContainer.appendChild(card);
+                eventOptions.innerHTML = '';
+                
+                const btn = document.createElement('button');
+                btn.className = 'w-full px-4 py-2 rounded option-btn';
+                btn.textContent = '继续前进';
+                
+                btn.addEventListener('click', () => {
+                    eventEffect.innerHTML = `<p>财富+500</p>`;
+                    eventEffect.classList.remove('hidden');
+                    
+                    gameState.money += 500;
+                    updateDisplays();
+                    
+                    btn.disabled = true;
+                    btn.classList.add('opacity-70');
+                    
+                    continueBtn.classList.remove('hidden');
+                });
+                
+                eventOptions.appendChild(btn);
+            }
+
+            // 房产事件
+            function showPropertyEvent(cell) {
+                const isOwned = gameState.properties.hasOwnProperty(cell.id);
+                
+                eventCardContainer.innerHTML = '';
+                const card = createPropertyCard(cell, isOwned);
+                eventCardContainer.appendChild(card);
+                
+                eventOptions.innerHTML = '';
+                
+                if (isOwned) {
+                    const property = gameState.properties[cell.id];
+                    
+                    // 处理首次购买后的事件
+                    if (gameState.propertyEvents[cell.id] && gameState.propertyEvents[cell.id].purchase && !property.purchaseEventShown) {
+                        property.purchaseEventShown = true;
+                        
+                        const event = gameState.propertyEvents[cell.id].purchase;
+                        
+                        eventEffect.innerHTML = `<p>${event.description}</p>`;
+                        eventEffect.classList.remove('hidden');
+                        
+                        unlockStory(event.storyId, event.description);
+                        
+                        continueBtn.classList.remove('hidden');
+                        
+                        return;
+                    }
+                    
+                    // 处理已开发地产的不同访问次数事件
+                    if (property.developed) {
+                        // 递增访问次数
+                        property.visitCount = (property.visitCount || 0) + 1;
+                        
+                        // 处理特定次数的访问事件
+                        if (property.visitCount === 1 && gameState.propertyEvents[cell.id].development.firstVisitAfter) {
+                            const event = gameState.propertyEvents[cell.id].development.firstVisitAfter;
+                            
+                            eventEffect.innerHTML = `<p>${event.description}</p>`;
+                            eventEffect.classList.remove('hidden');
+                            
+                            // 解锁后续经过剧情
+                            unlockStory(event.storyId, event.description);
+                            
+                            if (event.moneyChange) {
+                                gameState.money += event.moneyChange;
+                                updateDisplays();
+                            }
+                            
+                            continueBtn.classList.remove('hidden');
+                            return;
+                        }
+                        else if (property.visitCount === 2 && gameState.propertyEvents[cell.id].development.secondVisitAfter) {
+                            const event = gameState.propertyEvents[cell.id].development.secondVisitAfter;
+                            
+                            eventEffect.innerHTML = `<p>${event.description}</p>`;
+                            eventEffect.classList.remove('hidden');
+                            
+                            // 解锁后续经过剧情
+                            unlockStory(event.storyId, event.description);
+                            
+                            continueBtn.classList.remove('hidden');
+                            return;
+                        }
+                        else if (property.visitCount === 3 && gameState.propertyEvents[cell.id].development.thirdVisitAfter) {
+                            const event = gameState.propertyEvents[cell.id].development.thirdVisitAfter;
+                            
+                            eventEffect.innerHTML = `<p>${event.description}</p>`;
+                            eventEffect.classList.remove('hidden');
+                            
+                            // 解锁后续经过剧情
+                            unlockStory(event.storyId, event.description);
+                            
+                            continueBtn.classList.remove('hidden');
+                            return;
+                        }
+                        // 后续访问
+                        else if (gameState.propertyEvents[cell.id].development.subsequentVisits) {
+                            const event = gameState.propertyEvents[cell.id].development.subsequentVisits;
+                            
+                            eventEffect.innerHTML = `<p>${event.description}</p>`;
+                            eventEffect.classList.remove('hidden');
+                            
+                            // 解锁后续经过剧情
+                            unlockStory(event.storyId, event.description);
+                            
+                            if (event.moneyChange) {
+                                gameState.money += event.moneyChange;
+                                updateDisplays();
+                            }
+                            
+                            continueBtn.classList.remove('hidden');
+                            return;
+                        }
+                    }
+                    
+                    // 未开发，显示开发选项
+                    if (!property.developed) {
+                        const developCost = cell.developmentPrice;
+                        
+                        const devBtn = document.createElement('button');
+                        devBtn.className = 'w-full px-4 py-2 rounded option-btn';
+                        devBtn.textContent = `开发 ${cell.developmentType} (${developCost})`;
+                        
+                        // 检查是否有足够的钱开发
+                        if (gameState.money < developCost) {
+                            devBtn.disabled = true;
+                            devBtn.title = "资金不足，无法开发";
+                            devBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                            
+                            // 触发破产条件
+                            gameState.isBankrupt = true;
+                        } else {
+                            devBtn.addEventListener('click', () => {
+                                property.developed = true;
+                                property.developmentType = cell.developmentType;
+                                property.visitCount = 0; // 重置访问计数
+                                
+                                gameState.money -= developCost;
+                                
+                                let eventDesc = `你在${cell.name}开发了${cell.developmentType}，财富-${developCost}`;
+                                
+                                if (gameState.propertyEvents[cell.id] && gameState.propertyEvents[cell.id].development && gameState.propertyEvents[cell.id].development.initial) {
+                                    const event = gameState.propertyEvents[cell.id].development.initial;
+                                    eventDesc = event.description + `<br>财富-${developCost}`;
+                                    unlockStory(event.storyId, event.description);
+                                }
+                                
+                                eventEffect.innerHTML = `<p>${eventDesc}</p>`;
+                                eventEffect.classList.remove('hidden');
+                                updateDisplays();
+                                
+                                initGameBoard();
+                                
+                                document.querySelectorAll('#event-options button').forEach(btn => {
+                                    btn.disabled = true;
+                                    btn.classList.add('opacity-70');
+                                });
+                                
+                                continueBtn.classList.remove('hidden');
+                            });
+                        }
+                        
+                        eventOptions.appendChild(devBtn);
+                        
+                        const skipDevBtn = document.createElement('button');
+                        skipDevBtn.className = 'w-full px-4 py-2 rounded option-btn';
+                        skipDevBtn.textContent = '暂不开发';
+                        
+                        skipDevBtn.addEventListener('click', () => {
+                            eventEffect.innerHTML = `<p>你决定暂时不开发${cell.name}的${cell.developmentType}。</p>`;
+                            eventEffect.classList.remove('hidden');
+                            
+                            updateDisplays();
+                            
+                            document.querySelectorAll('#event-options button').forEach(btn => {
+                                btn.disabled = true;
+                                btn.classList.add('opacity-70');
+                            });
+                            
+                            continueBtn.classList.remove('hidden');
+                        });
+                        
+                        eventOptions.appendChild(skipDevBtn);
+                    } else {
+                        const btn = document.createElement('button');
+                        btn.className = 'w-full px-4 py-2 rounded option-btn';
+                        btn.textContent = '继续探索';
+                        
+                        btn.addEventListener('click', () => {
+                            eventEffect.innerHTML = `<p>你查看了${cell.name}的${cell.developmentType}，一切正常。</p>`;
+                            eventEffect.classList.remove('hidden');
+                            
+                            updateDisplays();
+                            
+                            btn.disabled = true;
+                            btn.classList.add('opacity-70');
+                            
+                            continueBtn.classList.remove('hidden');
+                        });
+                        
+                        eventOptions.appendChild(btn);
+                    }
+                } else {
+                    // 未购买，显示购买选项
+                    const buyBtn = document.createElement('button');
+                    buyBtn.className = `w-full px-4 py-2 rounded option-btn`;
+                    buyBtn.textContent = `购买 ${cell.name} (${cell.price})`;
+                    
+                    // 检查是否有足够的钱购买
+                    if (gameState.money < cell.price) {
+                        buyBtn.disabled = true;
+                        buyBtn.title = "资金不足，无法购买";
+                        buyBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                        
+                        // 触发破产条件
+                        gameState.isBankrupt = true;
+                    } else {
+                        buyBtn.addEventListener('click', () => {
+                            gameState.money -= cell.price;
+                            gameState.properties[cell.id] = {
+                                name: cell.name,
+                                englishName: cell.englishName,
+                                price: cell.price,
+                                developed: false,
+                                developmentType: "",
+                                purchaseEventShown: false
+                            };
+                            
+                            let eventDesc = `你成功购买了${cell.name}`;
+                            
+                            if (gameState.propertyEvents[cell.id] && gameState.propertyEvents[cell.id].purchase) {
+                                const event = gameState.propertyEvents[cell.id].purchase;
+                                eventDesc = event.description;
+                                gameState.properties[cell.id].purchaseEventShown = true;
+                                unlockStory(event.storyId, event.description);
+                            }
+                            
+                            eventEffect.innerHTML = `<p>${eventDesc}</p>`;
+                            eventEffect.classList.remove('hidden');
+                            updateDisplays();
+                            
+                            document.querySelectorAll('#event-options button').forEach(btn => {
+                                btn.disabled = true;
+                                btn.classList.add('opacity-70');
+                            });
+                            
+                            continueBtn.classList.remove('hidden');
+                        });
+                    }
+                    
+                    eventOptions.appendChild(buyBtn);
+                    
+                    const skipBtn = document.createElement('button');
+                    skipBtn.className = 'w-full px-4 py-2 rounded option-btn';
+                    skipBtn.textContent = '暂不购买';
+                    
+                    skipBtn.addEventListener('click', () => {
+                        eventEffect.innerHTML = `<p>暂时不购买${cell.name}，下次一定。</p>`;
+                        eventEffect.classList.remove('hidden');
+                        
+                        updateDisplays();
+                        
+                        document.querySelectorAll('#event-options button').forEach(btn => {
+                            btn.disabled = true;
+                            btn.classList.add('opacity-70');
+                        });
+                        
+                        continueBtn.classList.remove('hidden');
+                    });
+                    
+                    eventOptions.appendChild(skipBtn);
+                }
+                
+                // 检查破产状态并处理
+                if (gameState.isBankrupt) {
+                    // 禁用所有按钮
+                    document.querySelectorAll('#event-options button').forEach(btn => {
+                        btn.disabled = true;
+                        btn.classList.add('opacity-70');
+                    });
+                    
+                    // 显示破产事件
+                    setTimeout(() => {
+                        handleSpecialEvent('bankruptcy');
+                    }, 1000);
+                }
+            }
+
+            // 漫游事件
+            function showWanderEvent() {
+                // 确保有足够的漫游地点可供选择
+                if (gameState.wanderDestinations.length === 0) {
+                    console.error('没有可用的漫游地点数据');
+                    continueGame();
+                    return;
+                }
+                
+                // 随机选择3个漫游地点
+                const shuffled = [...gameState.wanderDestinations].sort(() => 0.5 - Math.random());
+                const selectedDestinations = shuffled.slice(0, 3);
+                
+                eventCardContainer.innerHTML = '';
+                
+                // 创建漫游选择卡片
+                const card = document.createElement('div');
+                card.className = 'card wander-card';
+                card.innerHTML = `
+                    <div class="card-header">
+                        <div class="card-title">漫游</div>
+                        <div class="card-subtitle">Wander</div>
+                    </div>
+                    <div class="card-body">
+                        <p>请选择一个目的地进行探索：</p>
+                    </div>
+                    <div class="card-footer">@Shy1</div>
+                `;
+                eventCardContainer.appendChild(card);
+                eventOptions.innerHTML = '';
+                
+                // 为每个选中的目的地创建按钮
+                selectedDestinations.forEach(dest => {
+                    const btn = document.createElement('button');
+                    btn.className = 'w-full px-4 py-2 rounded option-btn';
+                    btn.textContent = dest.name;
+                    
+                    btn.addEventListener('click', () => {
+                        // 记录玩家的漫游选择，用于后续机会事件判定
+                        gameState.lastWanderChoice = {
+                            id: dest.id,
+                            name: dest.name
+                        };
+                        
+                        // 显示所选目的地的详情
+                        eventCardContainer.innerHTML = '';
+                        const destCard = document.createElement('div');
+                        destCard.className = 'card wander-card';
+                        destCard.innerHTML = `
+                            <div class="card-header">
+                                <div class="card-title">${dest.name}</div>
+                                <div class="card-subtitle">Wander</div>
+                            </div>
+                            <div class="card-body">
+                                <p>${dest.description}</p>
+                            </div>
+                            <div class="card-footer">@Shy1</div>
+                        `;
+                        eventCardContainer.appendChild(destCard);
+                        
+                        eventOptions.innerHTML = '';
+                        
+                        // 解锁主剧情
+                        unlockStory(dest.storyId, dest.description);
+                        
+                        // 显示该地点的选项
+                        dest.options.forEach((option) => {
+                            const optBtn = document.createElement('button');
+                            optBtn.className = 'w-full px-4 py-2 rounded option-btn';
+                            optBtn.textContent = option.text;
+                            
+                            // 记录玩家的选择，用于后续机会事件判定
+                            optBtn.addEventListener('click', () => {
+                                gameState.lastWanderChoice.choice = option.text;
+                                
+                                gameState.money += option.moneyChange;
+                                
+                                eventEffect.innerHTML = `<p>${option.effect}</p>`;
+                                eventEffect.classList.remove('hidden');
+                                updateDisplays();
+                                
+                                // 解锁分支剧情（去除财富信息）
+                                const branchEffect = option.effect.replace(/财富[+-]\d+/g, '').trim();
+                                unlockStory(dest.storyId, dest.description, {
+                                    text: option.text,
+                                    effect: branchEffect
+                                });
+                                
+                                // 禁用所有选项按钮
+                                document.querySelectorAll('#event-options button').forEach(btn => {
+                                    btn.disabled = true;
+                                    btn.classList.add('opacity-70');
+                                });
+                                
+                                // 显示继续按钮
+                                continueBtn.classList.remove('hidden');
+                            });
+                            
+                            eventOptions.appendChild(optBtn);
+                        });
+                    });
+                    
+                    eventOptions.appendChild(btn);
+                });
+            }
+
+            // 命运事件
+            function showFateEvent() {
+                const randomIndex = Math.floor(Math.random() * gameState.fateEvents.length);
+                const event = gameState.fateEvents[randomIndex];
+                
+                eventCardContainer.innerHTML = '';
+                const card = createFateCard(event);
+                eventCardContainer.appendChild(card);
+                
+                eventOptions.innerHTML = '';
+                
+                gameState.money += event.moneyChange;
+                updateDisplays();
+                
+                // 解锁主剧情（去除财富信息）
+                const mainContent = event.content.replace(/财富[+-]\d+/g, '').trim();
+                unlockStory(event.storyId, mainContent);
+                
+                // 显示继续按钮
+                continueBtn.classList.remove('hidden');
+            }
+
+            // 机会事件
+            function showChanceEvent() {
+                const randomIndex = Math.floor(Math.random() * gameState.chanceEvents.length);
+                const event = gameState.chanceEvents[randomIndex];
+                
+                eventCardContainer.innerHTML = '';
+                const card = createChanceCard(event);
+                eventCardContainer.appendChild(card);
+                
+                eventOptions.innerHTML = '';
+                
+                // 解锁主剧情
+                unlockStory(event.storyId, event.content1);
+                
+                // 处理判定类事件
+                if (event.conditions) {
+                    let matchedCondition = null;
+                    
+                    // 检查是否满足特定条件（修复"出海日"判定bug）
+                    if (event.conditions.some(cond => cond.check === "hasProperty")) {
+                        // 明确检查是否拥有指定地产
+                        const hasProperty = gameState.properties && gameState.properties.hasOwnProperty(event.conditions[0].propertyId);
+                        matchedCondition = hasProperty ? event.conditions[0] : event.conditions[1];
+                    }
+                    // 检查漫游选择条件
+                    else if (event.conditions.some(cond => cond.check === "wanderChoice")) {
+                        matchedCondition = event.conditions.find(cond => {
+                            if (cond.check === "wanderChoice" && cond.wanderId && cond.choiceText) {
+                                return gameState.lastWanderChoice && 
+                                       gameState.lastWanderChoice.id === cond.wanderId &&
+                                       gameState.lastWanderChoice.choice === cond.choiceText;
+                            }
+                            return false;
+                        });
+                    }
+                    
+                    // 如果没有匹配的条件，使用默认条件
+                    if (!matchedCondition) {
+                        matchedCondition = event.conditions.find(cond => cond.check === "default");
+                    }
+                    
+                    if (matchedCondition) {
+                        const btn = document.createElement('button');
+                        btn.className = 'w-full px-4 py-2 rounded option-btn';
+                        btn.textContent = '确认';
+                        
+                        btn.addEventListener('click', () => {
+                            gameState.money += matchedCondition.moneyChange || 0;
+                            
+                            eventEffect.innerHTML = `<p>${matchedCondition.text}</p>`;
+                            eventEffect.classList.remove('hidden');
+                            
+                            updateDisplays();
+                            
+                            // 解锁分支剧情（去除财富信息）
+                            const branchEffect = matchedCondition.text.replace(/财富[+-]\d+/g, '').trim();
+                            unlockStory(event.storyId, event.content1, {
+                                text: "确认",
+                                effect: branchEffect
+                            });
+                            
+                            btn.disabled = true;
+                            btn.classList.add('opacity-70');
+                            
+                            continueBtn.classList.remove('hidden');
+                        });
+                        
+                        eventOptions.appendChild(btn);
+                    }
+                }
+                // 处理选择类事件
+                else if (event.options) {
+                    event.options.forEach((option) => {
+                        const optBtn = document.createElement('button');
+                        optBtn.className = 'w-full px-4 py-2 rounded option-btn';
+                        optBtn.textContent = option.text;
+                        
+                        optBtn.addEventListener('click', () => {
+                            gameState.money += option.moneyChange || 0;
+                            
+                            eventEffect.innerHTML = `<p>${option.effect}</p>`;
+                            eventEffect.classList.remove('hidden');
+                            
+                            updateDisplays();
+                            
+                            // 解锁分支剧情（去除财富信息）
+                            const branchEffect = option.effect.replace(/财富[+-]\d+/g, '').trim();
+                            unlockStory(event.storyId, event.content1, {
+                                text: option.text,
+                                effect: branchEffect
+                            });
+                            
+                            document.querySelectorAll('#event-options button').forEach(btn => {
+                                btn.disabled = true;
+                                btn.classList.add('opacity-70');
+                            });
+                            
+                            continueBtn.classList.remove('hidden');
+                        });
+                        
+                        eventOptions.appendChild(optBtn);
+                    });
+                }
+            }
+
+            // 任意门事件
+            function showAnywhereDoorEvent() {
+                const cell = gameState.boardCells.find(c => c.type === 'anywheredoor');
+                
+                eventCardContainer.innerHTML = '';
+                const card = createAnywhereDoorCard();
+                eventCardContainer.appendChild(card);
+                
+                eventOptions.innerHTML = '';
+                
+                // 创建步数选择器
+                const stepSelector = document.createElement('div');
+                stepSelector.className = 'step-selector';
+                
+                let selectedStep = null;
+                
+                // 创建1-15的步数按钮
+                for (let i = 1; i <= 15; i++) {
+                    const stepBtn = document.createElement('button');
+                    stepBtn.className = 'step-btn';
+                    stepBtn.textContent = i;
+                    stepBtn.dataset.step = i;
+                    
+                    stepBtn.addEventListener('click', () => {
+                        // 移除其他按钮的选中状态
+                        document.querySelectorAll('.step-btn').forEach(btn => {
+                            btn.classList.remove('selected');
+                        });
+                        
+                        // 设置当前按钮为选中状态
+                        stepBtn.classList.add('selected');
+                        selectedStep = i;
+                    });
+                    
+                    stepSelector.appendChild(stepBtn);
+                }
+                
+                eventOptions.appendChild(stepSelector);
+                
+                // 确认按钮
+                const confirmBtn = document.createElement('button');
+                confirmBtn.className = 'w-full px-4 py-2 rounded option-btn';
+                confirmBtn.textContent = '确认步数';
+                
+                confirmBtn.addEventListener('click', () => {
+                    if (selectedStep === null) {
+                        alert('请选择一个步数');
+                        return;
+                    }
+                    
+                    eventEffect.innerHTML = `<p>选择了前进 ${selectedStep} 步。</p>`;
+                    eventEffect.classList.remove('hidden');
+                    
+                    // 记录要前进的步数，在继续游戏时使用
+                    gameState.anywhereDoorSteps = selectedStep;
+                    
+                    continueBtn.classList.remove('hidden');
+                });
+                
+                eventOptions.appendChild(confirmBtn);
+            }
+
+            // 继续游戏
+            function continueGame() {
+                try {
+                    // 检查是否已满足通关条件，如果是则显示通关卡片
+                    if (gameState.readyForCompletion && !gameState.hasCompleted) {
+                        gameState.hasCompleted = true;
+                        handleSpecialEvent('completion');
+                        return;
+                    }
+                    
+                    // 检查是否是从任意门继续，使用选择的步数
+                    if (gameState.anywhereDoorSteps) {
+                        const steps = gameState.anywhereDoorSteps;
+                        gameState.anywhereDoorSteps = null;
+                        
+                        // 直接移动玩家
+                        movePlayer(steps);
+                        return;
+                    }
+                    
+                    gameState.dayCount++;
+                    gameState.totalDays++;
+                    
+                    eventEffect.classList.add('hidden');
+                    eventEffect.innerHTML = '';
+                    continueBtn.classList.add('hidden');
+                    
+                    eventScreen.classList.add('hidden');
+                    diceScreen.classList.remove('hidden');
+                    currentDayDisplay.textContent = gameState.dayCount + 1;
+                    
+                    updateDisplays();
+                } catch (error) {
+                    console.error('继续游戏时出错:', error);
+                }
+            }
+
+            // 事件监听器
+            startBtn.addEventListener('click', function() {
+                try {
+                    initGame();
+                    startScreen.classList.add('hidden');
+                    diceScreen.classList.remove('hidden');
+                } catch (error) {
+                    console.error('开始按钮点击事件出错:', error);
+                    startScreen.classList.add('hidden');
+                    diceScreen.classList.remove('hidden');
+                }
+            });
+
+            rollBtn.addEventListener('click', rollDice);
+            continueBtn.addEventListener('click', continueGame);
+
+            storyManualToggle.addEventListener('click', function() {
+                storyManualContainer.classList.toggle('open');
+            });
+
+            manualTabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    manualTabs.forEach(t => t.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    const tabId = this.getAttribute('data-tab');
+                    
+                    manualSections.forEach(section => section.classList.remove('active'));
+                    document.getElementById(`${tabId}-section`).classList.add('active');
+                });
+            });
+
+            // 初始化地图
+            initGameBoard();
+        });
+    </script>
+    </body>
+</html>
+    
